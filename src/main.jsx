@@ -91,7 +91,7 @@ function Title({ eyebrow, children, level = 2, className = '' }) {
 
 function Hero({ title, eyebrow, photo = 'hero', subtitle, home = false }) {
   return <section className={'hero ' + (home ? 'hero-home' : 'hero-inner')}>
-    <Photo name={photo} className="hero-photo" sizes="100vw" eager />
+    <div className="hero-image-layer"><Photo name={photo} className="hero-photo" sizes="100vw" eager /></div>
     <div className="hero-shade" />
     <div className="hero-content">
       <p className="eyebrow hero-rise" style={{ '--delay': '120ms' }}>{eyebrow}</p>
@@ -127,7 +127,7 @@ function Specs({ item }) {
 }
 
 function PropertyCard({ item, index = 0 }) {
-  return <Reveal delay={index * 70} className="property-tile"><Link to={(item.status ? '/past-transactions/' : '/properties/') + item.slug} className="property-card">
+  return <Reveal delay={index * 85} className="property-tile"><Link to={(item.status ? '/past-transactions/' : '/properties/') + item.slug} className="property-card">
     <div className="property-image"><Photo name={item.image} alt={item.alt} /><span className="status">{item.status || 'For Sale'} <i /></span><span className="card-arrow"><Icon name="diagonal" /></span></div>
     <div className="property-copy"><h3>{item.name}</h3><p>{item.location}</p><Specs item={item} /><strong>{money.format(item.price)}</strong></div>
   </Link></Reveal>;
@@ -145,7 +145,11 @@ function Services() {
   ];
   return <section className="section container" id="services">
     <Reveal><Title eyebrow="How can we help?">Find Your Next Move</Title></Reveal>
-    <Reveal className="service-grid">{services.map(([name, href, photo]) => <Link key={href} to={href} className="service-card"><Photo name={photo} /><span className="service-shade" /><span className="service-label">{name}<Icon name="diagonal" /></span></Link>)}</Reveal>
+    <div className="service-grid">{services.map(([name, href, photo], index) =>
+      <Reveal key={href} className="service-tile" delay={index * 85}>
+        <Link to={href} className="service-card"><Photo name={photo} /><span className="service-shade" /><span className="service-label">{name}<Icon name="diagonal" /></span></Link>
+      </Reveal>
+    )}</div>
   </section>;
 }
 
@@ -182,11 +186,11 @@ function Approach() {
   const [quote, label, photo] = approach[active];
   return <section className="approach">
     <Photo key={photo} name={photo} className="approach-photo" sizes="100vw" /><div className="band-shade" />
-    <div className="approach-content container">
+    <Reveal className="approach-content container">
       <p className="eyebrow">The Maren Ellis Approach</p>
       <div className="approach-slide" key={active} aria-live="polite"><h2>{quote}</h2><p>{label}</p></div>
       <div className="slide-buttons"><button aria-label="Previous slide" onClick={() => setActive((active + approach.length - 1) % approach.length)}><Icon name="left" /></button><button aria-label="Next slide" onClick={() => setActive((active + 1) % approach.length)}><Icon name="arrow" /></button></div>
-    </div>
+    </Reveal>
   </section>;
 }
 
@@ -201,10 +205,10 @@ function FAQ() {
   const [active, setActive] = useState(null);
   return <section className="section container faq">
     <Reveal><Title eyebrow="Good to know">Frequently<br /> Asked Questions</Title></Reveal>
-    <Reveal className="faq-list">{questions.map(([question, answer], index) => <div className="faq-item" key={question}>
+    <div className="faq-list">{questions.map(([question, answer], index) => <Reveal className="faq-item" key={question}>
       <h3><button aria-expanded={active === index} aria-controls={'answer-' + index} onClick={() => setActive(active === index ? null : index)}>{question}<Icon name="down" /></button></h3>
       <div id={'answer-' + index} className={'faq-answer ' + (active === index ? 'expanded' : '')} aria-hidden={active !== index}><div><p>{answer}</p></div></div>
-    </div>)}</Reveal>
+    </Reveal>)}</div>
   </section>;
 }
 
@@ -221,11 +225,11 @@ function Closing({ property }) {
 function Footer() {
   return <footer className="footer">
     <div className="container">
-      <div className="footer-top"><div><p className="eyebrow">California Real Estate</p><h2>Let’s talk about your next move.</h2></div><Button to="/contact" variant="outline">Get in Touch</Button></div>
-      <div className="footer-grid"><div><Brand /><p>California Coast &amp; Wine Country</p></div>
+      <Reveal className="footer-top"><div><p className="eyebrow">California Real Estate</p><h2>Let’s talk about your next move.</h2></div><Button to="/contact" variant="outline">Get in Touch</Button></Reveal>
+      <Reveal className="footer-grid"><div><Brand /><p>California Coast &amp; Wine Country</p></div>
         <div><h3>Explore</h3>{links.slice(1, 4).map(([name, href]) => <Link key={href} to={href}>{name}</Link>)}</div>
         <div><h3>Resources</h3><Link to="/journal">Journal</Link><Link to="/contact">Contact</Link><Link to="/privacy">Privacy</Link></div>
-      </div>
+      </Reveal>
       <div className="footer-bottom"><p>© {new Date().getFullYear()} Maren Ellis Real Estate.</p><a href="#top">Back to top ↑</a></div>
     </div>
   </footer>;
@@ -293,7 +297,8 @@ function Article({ slug }) {
   if (!item) return <NotFound />;
   return <><Hero title={item.title} eyebrow={item.date} photo={item.image} /><article className="section reading container">
     <Link className="back-link" to="/journal"><Icon name="left" size={17} /> Back to the journal</Link>
-    <p className="lede">{item.intro}</p>{item.sections.map(([heading, body]) => <section key={heading}><h2>{heading}</h2><p>{body}</p></section>)}
+    <Reveal><p className="lede">{item.intro}</p></Reveal>
+    {item.sections.map(([heading, body]) => <section key={heading}><Reveal><h2>{heading}</h2><p>{body}</p></Reveal></section>)}
   </article><Closing /></>;
 }
 
@@ -375,7 +380,7 @@ function App() {
     document.title = pathname === '/' ? 'Maren Ellis | ' + title : title + ' | Maren Ellis';
   }, [pathname, slug]);
 
-  return <div id="top"><a className="skip-link" href="#main">Skip to content</a><Header /><main id="main" key={pathname}>{page}</main><Footer /></div>;
+  return <div id="top"><div className="scroll-progress" aria-hidden="true" /><a className="skip-link" href="#main">Skip to content</a><Header /><main id="main" key={pathname}>{page}</main><Footer /></div>;
 }
 
 createRoot(document.getElementById('root')).render(<BrowserRouter><App /></BrowserRouter>);
