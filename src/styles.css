@@ -238,36 +238,40 @@ p{line-height:1.55}
 @media(prefers-reduced-motion:no-preference){
   .hero :is(.eyebrow,.hero-subtitle,.hero-word .hero-rise){
     animation-name:rise,hero-text-tint;
-    animation-duration:.96s,1.45s;
+    animation-duration:.96s,2.1s;
+    animation-timing-function:var(--ease),ease-in-out;
   }
   .hero .hero-word .hero-rise{animation-name:word-rise,hero-text-tint}
 
   .reveal{
-    --text-tint:#687a58;
+    --text-tint:#8c4b25;
     transition:opacity .75s var(--ease),translate .85s var(--ease);
     transition-delay:var(--reveal-delay,0ms);
   }
   :is(.image-band,.approach,.footer) .reveal,.reveal.service-tile{
-    --text-tint:#c5d5b1;
+    --text-tint:#ffd498;
   }
   .service-tile{transition:opacity .75s var(--ease),translate .85s var(--ease),flex .68s var(--ease)}
   .reveal.pending:not(:focus-within){opacity:0;translate:0 34px}
   .reveal:focus-within{transition-delay:0ms}
 
   .reveal :is(.section-title h2,.service-label,.market-grid>div,.footer-top h2,.reading h2){
-    transition:opacity .65s var(--ease),translate .82s var(--ease),color 1.35s ease-out;
-    transition-delay:calc(var(--reveal-delay,0ms) + 100ms);
+    --text-enter-delay:100ms;
+    transition:
+      opacity .65s var(--ease) calc(var(--reveal-delay,0ms) + var(--text-enter-delay)),
+      translate .82s var(--ease) calc(var(--reveal-delay,0ms) + var(--text-enter-delay)),
+      color 1.15s ease-in-out calc(var(--reveal-delay,0ms) + var(--text-enter-delay) + 540ms);
   }
   .reveal.pending:not(:focus-within) :is(.section-title h2,.service-label,.market-grid>div,.footer-top h2,.reading h2){
     opacity:0;
     translate:0 20px;
     color:var(--text-tint);
   }
-  .market-grid>div:nth-child(2){transition-delay:180ms}
-  .market-grid>div:nth-child(3){transition-delay:260ms}
+  .market-grid>div:nth-child(2){--text-enter-delay:180ms}
+  .market-grid>div:nth-child(3){--text-enter-delay:260ms}
 
   .reveal :is(.eyebrow,.bio-copy>p,.property-copy h3,.journal-card>h3,.reading p,.lede,.approach-slide h2,.approach-slide p){
-    transition:color 1.35s ease-out var(--reveal-delay,0ms);
+    transition:color 1.15s ease-in-out calc(var(--reveal-delay,0ms) + 540ms);
   }
   .reveal.pending:not(:focus-within) :is(.eyebrow,.bio-copy>p,.property-copy h3,.journal-card>h3,.reading p,.lede,.approach-slide h2,.approach-slide p){
     color:var(--text-tint);
@@ -314,6 +318,6 @@ p{line-height:1.55}
 }
 
 @keyframes hero-drift{from{translate:0 0}to{translate:0 22%}}
-@keyframes hero-text-tint{from{color:#c5d5b1}}
+@keyframes hero-text-tint{0%,48%{color:#ffd498}}
 @keyframes band-drift{from{transform:translateY(-5%) scale(1.14)}to{transform:translateY(5%) scale(1.14)}}
 @keyframes scroll-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
