@@ -26,9 +26,9 @@ function Icon({ name, size = 22 }) {
 }
 
 function Brand() {
-  return <Link to="/" className="brand" aria-label="Maren Ellis home">
-    <svg width="28" height="29" viewBox="0 0 28 29" aria-hidden="true"><path d="M1 1h8v27H1zM11 4l7 10-7 10zm8-3h8v27h-8l6-14z" fill="currentColor" /></svg>
-    <span>Maren Ellis</span>
+  return <Link to="/" className="brand" aria-label="Vela home">
+    <svg width="28" height="29" viewBox="0 0 28 29" aria-hidden="true"><path d="M1 2h8l8 19-4 7ZM21 2h6L18 19l-2-5Z" fill="currentColor" /></svg>
+    <span>Vela</span>
   </Link>;
 }
 
@@ -187,7 +187,7 @@ function Approach() {
   return <section className="approach">
     <Photo key={photo} name={photo} className="approach-photo" sizes="100vw" /><div className="band-shade" />
     <Reveal className="approach-content container">
-      <p className="eyebrow">The Maren Ellis Approach</p>
+      <p className="eyebrow">The Vela Approach</p>
       <div className="approach-slide" key={active} aria-live="polite"><h2>{quote}</h2><p>{label}</p></div>
       <div className="slide-buttons"><button aria-label="Previous slide" onClick={() => setActive((active + approach.length - 1) % approach.length)}><Icon name="left" /></button><button aria-label="Next slide" onClick={() => setActive((active + 1) % approach.length)}><Icon name="arrow" /></button></div>
     </Reveal>
@@ -230,14 +230,14 @@ function Footer() {
         <div><h3>Explore</h3>{links.slice(1, 4).map(([name, href]) => <Link key={href} to={href}>{name}</Link>)}</div>
         <div><h3>Resources</h3><Link to="/journal">Journal</Link><Link to="/contact">Contact</Link><Link to="/privacy">Privacy</Link></div>
       </Reveal>
-      <div className="footer-bottom"><p>© {new Date().getFullYear()} Maren Ellis Real Estate.</p><a href="#top">Back to top ↑</a></div>
+      <div className="footer-bottom"><p>© {new Date().getFullYear()} Vela Real Estate.</p><a href="#top">Back to top ↑</a></div>
     </div>
   </footer>;
 }
 
 function Home() {
   return <>
-    <Hero home title="Maren Ellis" eyebrow="A place to call your own" subtitle="California Real Estate" />
+    <Hero home title="Vela" eyebrow="A place to call your own" subtitle="California Real Estate" />
     <Services />
     <Bio />
     <MarketBand />
@@ -368,7 +368,7 @@ function App() {
   else if (parts[0] === 'properties') page = slug ? <ListingDetail slug={slug} /> : <Listings />;
   else if (parts[0] === 'past-transactions') page = slug ? <ListingDetail slug={slug} sold /> : <Listings sold />;
   else if (parts[0] === 'journal') page = slug ? <Article slug={slug} /> : <Journal />;
-  else if (pathname === '/about') page = <><Hero title="About Maren" eyebrow="Get to know me" photo="hero" /><Bio full /><MarketBand /><Closing /></>;
+  else if (pathname === '/about') page = <><Hero title="About Vela" eyebrow="Get to know us" photo="hero" /><Bio full /><MarketBand /><Closing /></>;
   else if (pathname === '/contact') page = <Contact />;
   else if (pathname === '/privacy') page = <Privacy />;
   else page = <NotFound />;
@@ -377,7 +377,7 @@ function App() {
     if (!hash) window.scrollTo({ top: 0, behavior: 'instant' });
     const record = [...properties, ...portfolio, ...articles].find(item => item.slug === slug);
     const title = record?.name || record?.title || titles[pathname] || (pathname === '/' ? 'California Real Estate' : 'Page Not Found');
-    document.title = pathname === '/' ? 'Maren Ellis | ' + title : title + ' | Maren Ellis';
+    document.title = pathname === '/' ? 'Vela | ' + title : title + ' | Vela';
   }, [pathname, slug]);
 
   return <div id="top"><div className="scroll-progress" aria-hidden="true" /><a className="skip-link" href="#main">Skip to content</a><Header /><main id="main" key={pathname}>{page}</main><Footer /></div>;

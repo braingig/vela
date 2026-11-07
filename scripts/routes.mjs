@@ -12,6 +12,6 @@ const routes = [
 
 for (const [route, title] of routes) {
   await mkdir('dist/' + route, { recursive: true });
-  await writeFile('dist/' + route + '/index.html', html.replace(/<title>.*?<\/title>/, '<title>' + title.replaceAll('&', '&amp;') + ' | Maren Ellis</title>'));
+  await writeFile('dist/' + route + '/index.html', html.replace(/<title>.*?<\/title>/, '<title>' + title.replaceAll('&', '&amp;') + ' | Vela</title>'));
 }
-await writeFile('dist/404.html', html.replace(/<title>.*?<\/title>/, '<title>Page Not Found | Maren Ellis</title>'));
+await writeFile('dist/404.html', html.replace(/<title>.*?<\/title>/, '<title>Page Not Found | Vela</title>'));
