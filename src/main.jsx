@@ -414,8 +414,8 @@ function PropertySearch() {
     <div className="container explorer-content">
       <div className="explorer-filters" role="search" aria-label="Find a property">
         <div className="filter-bar">
-          <label className="explorer-search"><Icon name="search" size={20} /><span className="sr-only">Search homes</span><input type="search" value={query} placeholder="Search by area, home, or feature" onChange={event => updateFilter('q', event.target.value)} /></label>
-          <FilterSelect name="beds" label="Bedrooms" placeholder="Any bedrooms" value={beds} onChange={updateFilter} />
+          <label className="explorer-search"><Icon name="search" size={20} /><span className="sr-only">Search homes</span><input type="search" value={query} placeholder="Search homes or features" onChange={event => updateFilter('q', event.target.value)} /></label>
+          <FilterSelect name="beds" label="Bedrooms" placeholder="Any beds" value={beds} onChange={updateFilter} />
           <FilterSelect name="price" label="Max price" placeholder="Any price" value={price} onChange={updateFilter} />
           <FilterSelect name="sort" label="Sort by" placeholder="Recommended" value={sort} onChange={updateFilter} />
         </div>
@@ -538,7 +538,7 @@ function ListingDetail({ slug, sold = false }) {
   return <><Hero title={item.name} eyebrow={item.status || 'Sample property · For sale'} photo={item.image} />
     <section className="section container detail"><Reveal>
       <Link className="back-link" to={sold ? '/past-transactions' : '/properties'}><Icon name="left" size={17} /> All {sold ? 'transactions' : 'properties'}</Link>
-      <Title eyebrow={item.location}>{money.format(item.price)}</Title>
+      <Title eyebrow={item.location} className="detail-price">{money.format(item.price)}</Title>
       <div className="detail-facts"><Specs item={item} />{item.style && <span>{item.style}</span>}</div>
       <p className="lede">{item.details}</p>
       <div className="detail-feature"><h3>Property highlights</h3><ul>{item.features.map(feature => <li key={feature}>{feature}</li>)}</ul></div>
