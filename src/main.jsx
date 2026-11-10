@@ -1,13 +1,14 @@
-import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { createContext, lazy, Suspense, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, useLocation, useSearchParams } from 'react-router-dom';
-import { articles, image, portfolio, properties, questions } from './content';
+import { articles, image, neighborhoodPropertiesLink, neighborhoods, portfolio, properties, questions } from './content';
 import './styles.css';
 
+const PropertyMap = lazy(() => import('./property-map'));
 const links = [
-  ['Home', '/'], ['About', '/about'], ['Featured Properties', '/properties'],
-  ['Past Transactions', '/past-transactions'], ['Journal', '/journal'], ['Let’s Connect', '/contact'],
-  ['Saved Homes', '/saved'],
+  ['Home', '/'], ['About', '/about'], ['Properties', '/properties'],
+  ['Past Transactions', '/past-transactions'], ['Neighborhoods', '/neighborhoods'], ['Journal', '/journal'],
+  ['Free Appraisal', '/appraisal'], ['Saved Homes', '/saved'], ['Let’s Connect', '/contact'],
 ];
 
 const savedHomesKey = 'vela.saved-homes';
@@ -53,6 +54,10 @@ function Icon({ name, size = 22 }) {
     area: 'M4 4h16v16H4zM7 17l10-10m-5 0h5v5',
     mail: 'M3 6h18v12H3zM3 7l9 7 9-7',
     heart: 'M20.8 8.7c0 4.1-8.8 9.8-8.8 9.8S3.2 12.8 3.2 8.7a4.7 4.7 0 0 1 8.8-2.1 4.7 4.7 0 0 1 8.8 2.1Z',
+    pin: 'M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0ZM15 10a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z',
+    search: 'M15.5 15.5 21 21M17.5 10.5a7 7 0 1 0-14 0 7 7 0 0 0 14 0Z',
+    filter: 'M3 6h5m4 0h9M3 12h11m4 0h3M3 18h2m4 0h12M8 4v4m6 2v4M5 16v4',
+    link: 'M10 13a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-2 2m3 5a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l2-2',
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]} /></svg>;
 }
@@ -87,10 +92,10 @@ function Header() {
   }
 
   return <>
-    <header className="header">
+    <header className={'header' + (/^\/properties\/?$/.test(location.pathname) ? ' header-light' : '')}>
       <Brand />
       <nav aria-label="Primary" className="top-links">
-        {[links[2], links[1], links[5]].map(([name, href]) => <Link key={href} to={href}>{name}</Link>)}
+        {[links[2], links[4], links[6]].map(([name, href]) => <Link key={href} to={href}>{name}</Link>)}
       </nav>
       <Link className="saved-nav" to="/saved" aria-current={location.pathname === '/saved' ? 'page' : undefined}>
         <Icon name="heart" size={19} /><span>Saved</span>{saved.length > 0 && <span className="saved-count">{saved.length}</span>}
@@ -133,9 +138,9 @@ function Hero({ title, eyebrow, photo = 'hero', subtitle, home = false }) {
       <p className="eyebrow hero-rise" style={{ '--delay': '120ms' }}>{eyebrow}</p>
       <h1 aria-label={title}>{title.split(' ').map((word, index) => <span className="hero-word" key={index}><span className="hero-rise" style={{ '--delay': (190 + index * 65) + 'ms' }}>{word}</span></span>)}</h1>
       {subtitle && <p className="hero-subtitle hero-rise" style={{ '--delay': '340ms' }}>{subtitle}</p>}
-      {home && <div className="hero-actions hero-rise" style={{ '--delay': '450ms' }}><Button to="/properties" variant="white">View Properties</Button><Button to="/contact" variant="outline">Let’s Connect</Button></div>}
+      {home && <div className="hero-actions hero-rise" style={{ '--delay': '450ms' }}><Button to="/appraisal" variant="white">Request a Free Appraisal <Icon name="arrow" size={17} /></Button><Button to="/properties" variant="outline">Browse Properties</Button></div>}
     </div>
-    {home && <a href="#services" className="hero-down" aria-label="Explore our services"><Icon name="double" size={29} /></a>}
+    {home && <a href="#seller-services" className="hero-down" aria-label="Explore seller services"><Icon name="double" size={29} /></a>}
   </section>;
 }
 
@@ -176,15 +181,17 @@ function SaveButton({ item, compact = false }) {
   </button>;
 }
 
-function PropertyCard({ item, index = 0 }) {
-  return <Reveal delay={index * 85} className="property-tile"><Link to={(item.status ? '/past-transactions/' : '/properties/') + item.slug} className="property-card">
+function PropertyCard({ item, index = 0, onShowMap, selected }) {
+  return <Reveal delay={Math.min(index, 3) * 85} className={'property-tile' + (selected ? ' property-tile-selected' : '')}><Link to={(item.status ? '/past-transactions/' : '/properties/') + item.slug} className="property-card">
     <div className="property-image"><Photo name={item.image} alt={item.alt} /><span className="status">{item.status || 'For Sale'} <i /></span><span className="card-arrow"><Icon name="diagonal" /></span></div>
     <div className="property-copy"><h3>{item.name}</h3><p>{item.location}</p><Specs item={item} /><strong>{money.format(item.price)}</strong></div>
-  </Link>{!item.status && <SaveButton item={item} compact />}</Reveal>;
+  </Link>{!item.status && <SaveButton item={item} compact />}
+    {onShowMap && <button type="button" className="card-map-button" onClick={() => onShowMap(item.slug)} aria-label={'Show on map: ' + item.name}><Icon name="pin" size={16} /> Map</button>}
+  </Reveal>;
 }
 
-function PropertyGrid({ items }) {
-  return <div className="property-grid">{items.map((item, index) => <PropertyCard key={item.slug} item={item} index={index} />)}</div>;
+function PropertyGrid({ items, onShowMap, selected }) {
+  return <div className="property-grid">{items.map((item, index) => <PropertyCard key={item.slug} item={item} index={index} onShowMap={onShowMap} selected={selected === item.slug} />)}</div>;
 }
 
 function Services() {
@@ -220,7 +227,7 @@ function MarketBand() {
     <Photo name="carmel" sizes="100vw" /><div className="band-shade" />
     <Reveal className="container band-content">
       <Title eyebrow="Where I work">From Coast to Wine Country</Title>
-      <div className="market-grid">{[['01','Carmel'], ['02','Montecito'], ['03','Sonoma']].map(([index, name]) => <div key={name}><span>{index}</span><p>{name}</p></div>)}</div>
+      <div className="market-grid">{neighborhoods.map((area, index) => <div key={area.slug}><Link to={'/neighborhoods/' + area.slug}><span>0{index + 1}</span><p>{area.name} <Icon name="diagonal" size={17} /></p></Link></div>)}</div>
     </Reveal>
   </section>;
 }
@@ -262,11 +269,11 @@ function FAQ() {
   </section>;
 }
 
-function Closing({ property }) {
+function Closing({ property, appraisal = false }) {
   return <section className="image-band closing">
     <Photo name={property?.image || 'hero'} sizes="100vw" /><div className="band-shade" />
     <Reveal className="container band-content"><Title eyebrow={property ? 'See it in person' : 'Your next chapter'}>{property ? 'Come Take a Closer Look' : 'Make Your Next Move'}</Title>
-      <div className="hero-actions"><Button to={property ? '/contact?property=' + property.slug : '/contact'} variant="white">{property ? 'Request a Tour' : 'Let’s Connect'}</Button>
+      <div className="hero-actions"><Button to={property ? '/contact?property=' + property.slug : appraisal ? '/appraisal' : '/contact'} variant="white">{property ? 'Request a Tour' : appraisal ? 'Request a Free Appraisal' : 'Let’s Connect'}</Button>
       {!property && <Button to="/properties" variant="outline">View Properties</Button>}</div>
     </Reveal>
   </section>;
@@ -277,47 +284,105 @@ function Footer() {
     <div className="container">
       <Reveal className="footer-top"><div><p className="eyebrow">California Real Estate</p><h2>Let’s talk about your next move.</h2></div><Button to="/contact" variant="outline">Get in Touch</Button></Reveal>
       <Reveal className="footer-grid"><div><Brand /><p>California Coast &amp; Wine Country</p></div>
-        <div><h3>Explore</h3>{links.slice(1, 4).map(([name, href]) => <Link key={href} to={href}>{name}</Link>)}</div>
-        <div><h3>Resources</h3><Link to="/journal">Journal</Link><Link to="/saved">Saved Homes</Link><Link to="/contact">Contact</Link><Link to="/privacy">Privacy</Link></div>
+        <div><h3>Explore</h3>{links.slice(1, 5).map(([name, href]) => <Link key={href} to={href}>{name}</Link>)}</div>
+        <div><h3>Resources</h3><Link to="/appraisal">Free Appraisal</Link><Link to="/journal">Journal</Link><Link to="/saved">Saved Homes</Link><Link to="/contact">Contact</Link><Link to="/privacy">Privacy</Link></div>
       </Reveal>
       <div className="footer-bottom"><p>© {new Date().getFullYear()} Vela Real Estate.</p><a href="#top">Back to top ↑</a></div>
     </div>
   </footer>;
 }
 
+function SellerServices() {
+  return <section className="section muted" id="seller-services">
+    <div className="container seller-grid">
+      <Reveal className="seller-photo"><Photo name="villaInterior" alt="Warm, neutral furniture in a sunlit living room" /></Reveal>
+      <Reveal className="seller-copy">
+        <Title eyebrow="For sellers">Free home styling</Title>
+        <p>Show buyers how your home lives. We’ll walk through the rooms with you and suggest simple changes to layout, lighting, and furnishings before photography.</p>
+        <Link className="back-link" to="/journal/prepare-to-list">See how to prepare for listing photos <Icon name="arrow" size={17} /></Link>
+        <Button to="/appraisal">Request a Free Appraisal</Button>
+      </Reveal>
+    </div>
+  </section>;
+}
+
+function SellerStories() {
+  return <section className="section container seller-stories">
+    <Reveal><Title eyebrow="Seller experiences">What the process can feel like</Title></Reveal>
+    <div className="story-grid">
+      <Reveal><figure><blockquote>“The appraisal helped us decide when to sell. We left the first meeting with a much clearer idea of what to do next.”</blockquote><figcaption>Example testimonial · Appraisal</figcaption></figure></Reveal>
+      <Reveal><figure><blockquote>“A few thoughtful changes made the rooms feel more inviting. When the photos came back, the house still felt like ours.”</blockquote><figcaption>Example testimonial · Home styling</figcaption></figure></Reveal>
+    </div>
+  </section>;
+}
+
 function Home() {
   return <>
-    <Hero home title="Vela" eyebrow="A place to call your own" subtitle="California Real Estate" />
+    <Hero home title="What’s your home worth?" eyebrow="California Coast & Wine Country" subtitle="Start with a free, no-obligation appraisal and get a clearer picture of your next move." />
+    <SellerServices />
+    <SellerStories />
     <Services />
     <Bio />
     <MarketBand />
-    <section className="section container"><Reveal><Title eyebrow="Selected for you">Featured Listings</Title></Reveal><PropertyGrid items={properties} /><div className="center"><Button to="/properties">View All</Button></div></section>
+    <section className="section container"><Reveal><Title eyebrow="Selected for you">Explore Properties</Title></Reveal><PropertyGrid items={properties.slice(0, 3)} /><div className="center"><Button to="/properties">View All Properties</Button></div></section>
     <Approach />
     <section className="section muted"><div className="container"><Reveal><Title eyebrow="Notes from the field">The Real Estate Journal</Title></Reveal><JournalGrid /><div className="center"><Button to="/journal">View All</Button></div></div></section>
     <FAQ />
-    <Closing />
+    <Closing appraisal />
   </>;
 }
 
-function Listings({ sold = false }) {
-  return <><Hero title={sold ? 'Past Transactions' : 'Featured Properties'} eyebrow={sold ? 'A look back' : 'A place to call your own'} photo={sold ? 'sonoma' : 'carmel'} />
-    <section className="section container"><Reveal><Title eyebrow={sold ? 'Property portfolio' : 'Selected for you'}>{sold ? 'Recently Sold' : 'Homes for Sale'}</Title></Reveal>{sold ? <PropertyGrid items={portfolio} /> : <PropertySearch />}</section><Closing /></>;
+function SoldListings() {
+  return <><Hero title="Past Transactions" eyebrow="A look back" photo="sonoma" />
+    <section className="section container"><Reveal><Title eyebrow="Property portfolio">Recently Sold</Title></Reveal><PropertyGrid items={portfolio} /></section><Closing /></>;
+}
+
+const filterOptions = {
+  beds: ['2', '3', '4', '5'].map(value => [value, value + '+ beds']),
+  price: [2000000, 3000000, 4000000, 5000000, 6000000, 7500000].map(value => [String(value), money.format(value)]),
+  baths: ['2', '3', '4', '5'].map(value => [value, value + '+ baths']),
+  area: ['2000', '3000', '4000', '5000'].map(value => [value, number.format(value) + '+ sq ft']),
+  style: [...new Set(properties.map(item => item.style))].sort().map(value => [value, value]),
+  sort: [['price-asc', 'Price, low to high'], ['price-desc', 'Price, high to low'], ['area-desc', 'Largest first']],
+};
+
+function FilterSelect({ name, label, placeholder, value, onChange }) {
+  return <div className="filter-field">
+    <label htmlFor={'listing-' + name}>{label}</label>
+    <select id={'listing-' + name} value={value} onChange={event => onChange(name, event.target.value)}>
+      <option value="">{placeholder}</option>
+      {filterOptions[name].map(([key, text]) => <option key={key} value={key}>{text}</option>)}
+    </select>
+  </div>;
 }
 
 function PropertySearch() {
   const [params, setParams] = useSearchParams();
+  const [view, setView] = useState('list');
+  const [mapArea, setMapArea] = useState(null);
+  const [selectedSlug, setSelectedSlug] = useState(null);
   const query = params.get('q') || '';
-  const locations = [...new Set(properties.map(item => item.location))].sort();
-  const location = locations.find(value => value === params.get('location')) || '';
-  const minimumBeds = ['3', '4', '5'].find(value => value === params.get('beds')) || '';
-  const sort = ['price-asc', 'price-desc', 'area-desc'].find(value => value === params.get('sort')) || '';
-  const hasFilters = Boolean(query || location || minimumBeds || sort);
-  const search = query.trim().toLowerCase();
-  const items = properties.filter(item =>
-    (!location || item.location === location) &&
-    item.beds >= Number(minimumBeds) &&
-    [item.name, item.location, item.style, ...item.features].join(' ').toLowerCase().includes(search)
-  );
+  const location = neighborhoods.find(area => area.location === params.get('location'))?.location || '';
+  const validOption = key => filterOptions[key].find(([value]) => value === params.get(key))?.[0] || '';
+  const beds = validOption('beds');
+  const price = validOption('price');
+  const baths = validOption('baths');
+  const area = validOption('area');
+  const style = validOption('style');
+  const sort = validOption('sort');
+  const extraFilters = [baths, area, style].filter(Boolean).length;
+  const hasFilters = Boolean(query || location || beds || price || extraFilters || sort || mapArea);
+  const matching = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return properties.filter(item =>
+      (!location || item.location === location) &&
+      (!style || item.style === style) &&
+      (!price || item.price <= Number(price)) &&
+      item.beds >= Number(beds) && item.baths >= Number(baths) && item.area >= Number(area) &&
+      [item.name, item.location, item.style, ...item.features].join(' ').toLowerCase().includes(search)
+    );
+  }, [query, location, beds, price, baths, area, style]);
+  const items = matching.filter(item => !mapArea || mapArea.contains(item.coordinates));
   if (sort === 'price-asc') items.sort((a, b) => a.price - b.price);
   if (sort === 'price-desc') items.sort((a, b) => b.price - a.price);
   if (sort === 'area-desc') items.sort((a, b) => b.area - a.area);
@@ -327,35 +392,64 @@ function PropertySearch() {
     const next = new URLSearchParams(window.location.search);
     if (value) next.set(key, value);
     else next.delete(key);
+    if (key === 'location') setMapArea(null);
     setParams(next, { replace: true });
   }
 
   function resetFilters() {
     const next = new URLSearchParams(window.location.search);
-    for (const key of ['q', 'location', 'beds', 'sort']) next.delete(key);
+    for (const key of ['q', 'location', ...Object.keys(filterOptions)]) next.delete(key);
+    setMapArea(null);
+    setSelectedSlug(null);
     setParams(next, { replace: true });
   }
 
-  return <>
-    <div className="listing-filters" role="search" aria-label="Find a property">
-      <label>Search homes<input type="search" value={query} placeholder="Name, style, or feature" onChange={event => updateFilter('q', event.target.value)} /></label>
-      <div><label htmlFor="listing-location">Location</label><select id="listing-location" value={location} onChange={event => updateFilter('location', event.target.value)}>
-        <option value="">All locations</option>
-        {locations.map(value => <option key={value}>{value}</option>)}
-      </select></div>
-      <div><label htmlFor="listing-bedrooms">Bedrooms</label><select id="listing-bedrooms" value={minimumBeds} onChange={event => updateFilter('beds', event.target.value)}>
-        <option value="">Any number</option><option value="3">3+</option><option value="4">4+</option><option value="5">5+</option>
-      </select></div>
-      <div><label htmlFor="listing-sort">Sort by</label><select id="listing-sort" value={sort} onChange={event => updateFilter('sort', event.target.value)}>
-        <option value="">Featured</option><option value="price-asc">Price, low to high</option><option value="price-desc">Price, high to low</option><option value="area-desc">Largest first</option>
-      </select></div>
+  function showOnMap(slug) {
+    setSelectedSlug(slug);
+    setView('map');
+  }
+
+  return <div className="property-explorer">
+    <div className="explorer-intro container"><p className="eyebrow">California Coast & Wine Country</p><h1>Properties</h1><p>Explore homes from the Pacific coast to Sonoma wine country.</p></div>
+    <div className="container explorer-content">
+      <div className="explorer-filters" role="search" aria-label="Find a property">
+        <div className="filter-bar">
+          <label className="explorer-search"><Icon name="search" size={20} /><span className="sr-only">Search homes</span><input type="search" value={query} placeholder="Search by area, home, or feature" onChange={event => updateFilter('q', event.target.value)} /></label>
+          <FilterSelect name="beds" label="Bedrooms" placeholder="Any bedrooms" value={beds} onChange={updateFilter} />
+          <FilterSelect name="price" label="Max price" placeholder="Any price" value={price} onChange={updateFilter} />
+          <FilterSelect name="sort" label="Sort by" placeholder="Recommended" value={sort} onChange={updateFilter} />
+        </div>
+        <details className="extra-filters">
+          <summary><Icon name="filter" size={18} /> More filters{extraFilters ? ' (' + extraFilters + ')' : ''}</summary>
+          <div className="extra-filter-fields">
+            <FilterSelect name="baths" label="Bathrooms" placeholder="Any bathrooms" value={baths} onChange={updateFilter} />
+            <FilterSelect name="area" label="Interior area" placeholder="Any size" value={area} onChange={updateFilter} />
+            <FilterSelect name="style" label="Architecture" placeholder="Any style" value={style} onChange={updateFilter} />
+          </div>
+        </details>
+        <div className="location-filters" role="group" aria-label="Location">
+          <button type="button" aria-pressed={!location} onClick={() => updateFilter('location', '')}>All locations</button>
+          {neighborhoods.map(item => <button key={item.slug} type="button" aria-pressed={location === item.location} onClick={() => updateFilter('location', item.location)}><Icon name="pin" size={15} /> {item.name}</button>)}
+        </div>
+      </div>
+      <div className="explorer-results">
+        <p role="status"><strong>{items.length} {items.length === 1 ? 'property' : 'properties'}</strong>{mapArea ? ' in this map area' : ' · Sample listings'}</p>
+        {hasFilters && <button className="text-button" type="button" onClick={resetFilters}>Reset filters</button>}
+        <div className="explorer-view" role="group" aria-label="View">
+          <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>List</button>
+          <button type="button" aria-pressed={view === 'map'} onClick={() => setView('map')}>Map</button>
+        </div>
+      </div>
+      <div className="explorer-split" data-view={view}>
+        <section className="explorer-list" aria-label="Property results">
+          {items.length > 0 ? <PropertyGrid items={items} onShowMap={showOnMap} selected={selectedSlug} /> : <div className="listing-empty"><h2>No matching properties</h2><p>Try widening your search or resetting the filters.</p></div>}
+        </section>
+        <Suspense fallback={<p className="map-pane map-note" role="status">Loading map…</p>}>
+          <PropertyMap items={items} fitItems={matching} selected={items.find(item => item.slug === selectedSlug)} onSelect={setSelectedSlug} onSearchArea={setMapArea} areaActive={Boolean(mapArea)} />
+        </Suspense>
+      </div>
     </div>
-    <div className="listing-results">
-      <p role="status">{items.length} {items.length === 1 ? 'home' : 'homes'} found</p>
-      {hasFilters && <button className="text-button" type="button" onClick={resetFilters}>Reset filters</button>}
-    </div>
-    {items.length > 0 ? <PropertyGrid items={items} /> : <div className="listing-empty"><h3>No homes match these filters.</h3><p>Try another location or search term.</p></div>}
-  </>;
+  </div>;
 }
 
 const comparisonRows = [
@@ -411,23 +505,70 @@ function Gallery({ item }) {
           <button aria-label="Next photo" onClick={step}><Icon name="arrow" /></button>
         </figcaption>
       </figure>
+      <div className="gallery-thumbs" aria-label="Choose a photo">{photos.map(([name], index) => <button key={name} type="button" aria-label={index === 0 ? 'Show exterior' : 'Show interior'} aria-pressed={index === active} onClick={() => setActive(index)}><Photo name={name} sizes="95px" /></button>)}</div>
     </Reveal>
   </section>;
+}
+
+function ShareProperty({ item, sold }) {
+  const [copyStatus, setCopyStatus] = useState('');
+  const url = new URL((sold ? '/past-transactions/' : '/properties/') + item.slug, window.location.origin).href;
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('manual');
+    }
+  }
+
+  return <div className="share-property">
+    <button className="text-button" type="button" onClick={copyLink}><Icon name="link" size={17} /> Copy listing link</button>
+    <a className="text-button" href={'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url)} target="_blank" rel="noopener noreferrer">Share on Facebook <Icon name="diagonal" size={15} /></a>
+    {copyStatus === 'copied' && <p role="status">Listing link copied.</p>}
+    {copyStatus === 'manual' && <label>Listing link<input value={url} readOnly onFocus={event => event.target.select()} /></label>}
+  </div>;
 }
 
 function ListingDetail({ slug, sold = false }) {
   const item = (sold ? portfolio : properties).find(property => property.slug === slug);
   if (!item) return <NotFound />;
-  return <><Hero title={item.name} eyebrow={item.status || 'For Sale'} photo={item.image} />
+  const neighborhood = neighborhoods.find(area => area.location === item.location);
+  return <><Hero title={item.name} eyebrow={item.status || 'Sample property · For sale'} photo={item.image} />
     <section className="section container detail"><Reveal>
       <Link className="back-link" to={sold ? '/past-transactions' : '/properties'}><Icon name="left" size={17} /> All {sold ? 'transactions' : 'properties'}</Link>
       <Title eyebrow={item.location}>{money.format(item.price)}</Title>
-      <p className="lede">{item.details}</p><Specs item={item} />
-      {!sold && <SaveButton item={item} />}
+      <div className="detail-facts"><Specs item={item} />{item.style && <span>{item.style}</span>}</div>
+      <p className="lede">{item.details}</p>
       <div className="detail-feature"><h3>Property highlights</h3><ul>{item.features.map(feature => <li key={feature}>{feature}</li>)}</ul></div>
-    </Reveal><Reveal className="detail-side"><Photo name="agent" alt="Maren Ellis" /><h3>Maren Ellis</h3><p>California Real Estate</p><Button to={sold ? '/contact' : '/contact?property=' + item.slug}>{sold ? 'Let’s Connect' : 'Request a Tour'}</Button></Reveal></section>
+      {neighborhood && <Link className="back-link detail-area" to={'/neighborhoods/' + neighborhood.slug}><Icon name="pin" size={17} /> Explore {neighborhood.name} <Icon name="arrow" size={17} /></Link>}
+    </Reveal><Reveal className="detail-side"><Photo name="agent" alt="Maren Ellis" /><h3>Maren Ellis</h3><p>California Real Estate</p>
+      <div className="detail-actions"><Button to={sold ? '/contact' : '/contact?property=' + item.slug}>{sold ? 'Let’s Connect' : 'Request a Tour'}</Button>{!sold && <SaveButton item={item} />}</div>
+      <ShareProperty item={item} sold={sold} />
+    </Reveal></section>
     {item.interior && <Gallery item={item} />}
     <Closing property={sold ? undefined : item} /></>;
+}
+
+function Neighborhoods({ slug }) {
+  const area = neighborhoods.find(item => item.slug === slug);
+  if (slug && !area) return <NotFound />;
+  if (area) return <><Hero title={area.name} eyebrow="Neighborhood guide" photo={area.photo} />
+    <article className="section reading container">
+      <Link className="back-link" to="/neighborhoods"><Icon name="left" size={17} /> All neighborhoods</Link>
+      <p className="lede">{area.intro}</p>
+      {area.notes.map(([title, body]) => <section key={title}><h2>{title}</h2><p>{body}</p></section>)}
+      <div className="neighborhood-actions"><Button to={neighborhoodPropertiesLink(area.location)}>Browse Homes in {area.name}</Button><Button to="/appraisal">Request a Free Appraisal</Button></div>
+    </article><Closing /></>;
+  return <><Hero title="Neighborhoods" eyebrow="California Coast & Wine Country" photo="carmel" />
+    <section className="section container">
+      <Title eyebrow="Local guides">Find the right place to live</Title>
+      <div className="journal-grid">{neighborhoods.map(item => <Reveal key={item.slug}><Link className="journal-card" to={'/neighborhoods/' + item.slug}>
+        <div className="journal-image"><Photo name={item.photo} /><span className="card-arrow"><Icon name="diagonal" /></span></div>
+        <p>{item.location}</p><h3>{item.name}</h3><p>{item.intro}</p>
+      </Link></Reveal>)}</div>
+    </section><Closing /></>;
 }
 
 function Journal() {
@@ -444,7 +585,7 @@ function Article({ slug }) {
   </article><Closing /></>;
 }
 
-function Contact() {
+function Contact({ appraisal = false }) {
   const [params] = useSearchParams();
   const property = properties.find(item => item.slug === params.get('property'));
   const [draft, setDraft] = useState('');
@@ -456,10 +597,10 @@ function Contact() {
     const values = new FormData(event.currentTarget);
     setCopied(false);
     setDraft([
-      property ? 'Tour inquiry: ' + property.name : 'Real estate inquiry',
+      appraisal ? 'Free appraisal request' : property ? 'Tour inquiry: ' + property.name : 'Real estate inquiry',
       'Name: ' + values.get('name'),
       'Email: ' + values.get('email'),
-      'Interest: ' + values.get('interest'),
+      ...(appraisal ? ['Property address: ' + values.get('address'), 'City or suburb: ' + values.get('suburb')] : ['Interest: ' + values.get('interest')]),
       '',
       values.get('message'),
     ].join('\n'));
@@ -472,17 +613,22 @@ function Contact() {
     catch { draftRef.current?.select(); }
   }
 
-  return <><Hero title="Get in Touch" eyebrow="Let’s connect" photo="montecito" /><section className="section container contact">
-    <Reveal><Title eyebrow={property ? 'Private showing' : 'Start the conversation'}>{property ? 'Request a Tour' : 'Tell Me What You Have in Mind'}</Title>
-      {property && <p className="inquiry-property">{property.name} · {property.location}</p>}
+  const title = appraisal ? 'Request a Free Appraisal' : 'Get in Touch';
+  return <><Hero title={title} eyebrow={appraisal ? 'For homeowners' : 'Let’s connect'} photo="montecito" /><section className="section container contact">
+    <Reveal><Title eyebrow={appraisal ? 'Complimentary and obligation-free' : property ? 'Private showing' : 'Start the conversation'}>{appraisal ? 'Tell us about your home' : property ? 'Request a Tour' : 'Tell Me What You Have in Mind'}</Title>
+      {appraisal && <p className="appraisal-note">Share a few details about the property to prepare your appraisal request. This demo creates a draft you can copy.</p>}
+      {!appraisal && property && <p className="inquiry-property">{property.name} · {property.location}</p>}
       <form onSubmit={prepare}>
         <label>Name<input name="name" autoComplete="name" required /></label>
         <label>Email<input name="email" type="email" autoComplete="email" required /></label>
-        <label>I’m interested in<select name="interest" defaultValue={property ? 'Private showing' : ''} required><option value="" disabled>Select an option</option><option>Buying</option><option>Selling</option><option>Private showing</option><option>Relocating</option></select></label>
-        <label>{property ? 'Preferred times or questions' : 'Your message'}<textarea name="message" rows="4" required /></label>
-        <button className="button olive" type="submit">Prepare Inquiry</button>
+        {appraisal ? <>
+          <label>Property address<input name="address" autoComplete="street-address" required /></label>
+          <label>City or suburb<input name="suburb" autoComplete="address-level2" required /></label>
+        </> : <label>I’m interested in<select name="interest" defaultValue={property ? 'Private showing' : ''} required><option value="" disabled>Select an option</option><option>Buying</option><option>Selling</option><option>Private showing</option><option>Relocating</option></select></label>}
+        <label>{appraisal ? 'Anything else we should know? (optional)' : property ? 'Preferred times or questions' : 'Your message'}<textarea name="message" rows="4" required={!appraisal} /></label>
+        <button className="button olive" type="submit">{appraisal ? 'Prepare Appraisal Request' : 'Prepare Inquiry'}</button>
       </form>
-      {draft && <div className="draft"><p>Your inquiry is ready to copy.</p><label>Inquiry draft<textarea ref={draftRef} rows="7" readOnly value={draft} /></label><button className="button olive" onClick={copy}>{copied ? 'Copied' : 'Copy Inquiry'}</button><span className="sr-only" role="status">{copied ? 'Inquiry copied' : 'Inquiry draft ready'}</span></div>}
+      {draft && <div className="draft"><p>{appraisal ? 'Your appraisal request is ready to copy.' : 'Your inquiry is ready to copy.'}</p><label>{appraisal ? 'Appraisal request draft' : 'Inquiry draft'}<textarea ref={draftRef} rows="7" readOnly value={draft} /></label><button className="button olive" onClick={copy}>{copied ? 'Copied' : appraisal ? 'Copy Request' : 'Copy Inquiry'}</button><span className="sr-only" role="status">{copied ? 'Draft copied' : 'Draft ready'}</span></div>}
     </Reveal>
     <Reveal className="contact-image"><Photo name="agent" alt="Maren Ellis" /></Reveal>
   </section></>;
@@ -496,7 +642,7 @@ function NotFound() {
   return <><Hero title="Page Not Found" eyebrow="404" /><section className="section container center"><Button to="/">Back to Home</Button></section></>;
 }
 
-const titles = { '/about': 'About', '/properties': 'Featured Properties', '/past-transactions': 'Past Transactions', '/journal': 'Journal', '/contact': 'Contact', '/privacy': 'Privacy', '/saved': 'Saved Homes' };
+const titles = { '/about': 'About', '/properties': 'Properties', '/past-transactions': 'Past Transactions', '/neighborhoods': 'Neighborhoods', '/journal': 'Journal', '/contact': 'Contact', '/appraisal': 'Free Appraisal', '/privacy': 'Privacy', '/saved': 'Saved Homes' };
 
 function App() {
   const location = useLocation();
@@ -507,18 +653,20 @@ function App() {
   let page;
   if (parts.length === 0) page = <Home />;
   else if (parts.length > 2) page = <NotFound />;
-  else if (parts[0] === 'properties') page = slug ? <ListingDetail slug={slug} /> : <Listings />;
-  else if (parts[0] === 'past-transactions') page = slug ? <ListingDetail slug={slug} sold /> : <Listings sold />;
+  else if (parts[0] === 'properties') page = slug ? <ListingDetail slug={slug} /> : <PropertySearch />;
+  else if (parts[0] === 'past-transactions') page = slug ? <ListingDetail slug={slug} sold /> : <SoldListings />;
+  else if (parts[0] === 'neighborhoods') page = <Neighborhoods slug={slug} />;
   else if (parts[0] === 'journal') page = slug ? <Article slug={slug} /> : <Journal />;
   else if (pathname === '/about') page = <><Hero title="About Vela" eyebrow="Get to know us" photo="hero" /><Bio full /><MarketBand /><Closing /></>;
   else if (pathname === '/contact') page = <Contact />;
+  else if (pathname === '/appraisal') page = <Contact appraisal />;
   else if (pathname === '/privacy') page = <Privacy />;
   else if (pathname === '/saved') page = <SavedHomes />;
   else page = <NotFound />;
 
   useEffect(() => {
     if (!hash) window.scrollTo({ top: 0, behavior: 'instant' });
-    const record = [...properties, ...portfolio, ...articles].find(item => item.slug === slug);
+    const record = [...properties, ...portfolio, ...articles, ...neighborhoods].find(item => item.slug === slug);
     const title = record?.name || record?.title || titles[pathname] || (pathname === '/' ? 'California Real Estate' : 'Page Not Found');
     document.title = pathname === '/' ? 'Vela | ' + title : title + ' | Vela';
   }, [pathname, slug]);
