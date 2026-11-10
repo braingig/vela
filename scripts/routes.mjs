@@ -3,7 +3,7 @@ import { articles, portfolio, properties } from '../src/content.js';
 
 const html = await readFile('dist/index.html', 'utf8');
 const routes = [
-  ['about', 'About'], ['contact', 'Contact'], ['privacy', 'Privacy'],
+  ['about', 'About'], ['contact', 'Contact'], ['privacy', 'Privacy'], ['saved', 'Saved Homes'],
   ['properties', 'Featured Properties'], ['past-transactions', 'Past Transactions'], ['journal', 'Journal'],
   ...properties.map(item => ['properties/' + item.slug, item.name]),
   ...portfolio.map(item => ['past-transactions/' + item.slug, item.name]),
