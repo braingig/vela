@@ -165,8 +165,15 @@ p{line-height:1.55}
 .contact-image{aspect-ratio:.8;overflow:hidden}
 .contact-image img{object-position:50% 36%}
 .contact form,.draft{display:grid;gap:16px}
-.contact label,.draft label{display:grid;gap:7px;font-size:15px;font-weight:600}
-.contact input,.contact select,.contact textarea{width:100%;border:1px solid #afb6a8;border-radius:4px;background:transparent;padding:12px;color:var(--ink);font-weight:400}
+.contact label,.draft label,.buyer-filters label{display:grid;gap:7px;font-size:15px;font-weight:600}
+.contact input,.contact select,.contact textarea,.buyer-filters :is(input,select){width:100%;border:1px solid #afb6a8;border-radius:4px;background:transparent;padding:12px;color:var(--ink);font-weight:400}
+.buyer-filters{display:grid;grid-template-columns:2fr 1fr auto;align-items:end;gap:16px;padding:clamp(16px,3vw,34px);background:var(--soft)}
+.buyer-results{color:var(--muted);margin:20px 0;font-size:15px}
+.buyer-empty{padding:32px 0;border-block:1px solid var(--line);color:var(--muted)}
+.buyer-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,3vw,45px);padding:0;margin:0 0 42px;list-style:none}
+.buyer-steps li{border-top:1px solid var(--line);padding-top:18px}
+.buyer-steps h3{font-size:clamp(20px,2vw,28px);font-weight:600;margin:8px 0}
+.buyer-steps p{color:var(--muted)}
 .contact textarea{resize:vertical}
 .contact .button{justify-self:start}
 .inquiry-property{background:var(--soft);padding:13px 15px;margin-bottom:22px}
@@ -231,6 +238,8 @@ p{line-height:1.55}
   .hero-home h1{max-width:260px}
   .menu-body{min-height:min(505px,calc(100dvh - 75px));justify-content:space-between;padding-bottom:50px}
   .gallery-image{aspect-ratio:1.25}
+  .buyer-filters,.buyer-steps{grid-template-columns:1fr}
+  .buyer-filters button{justify-self:start}
 }
 
 .scroll-progress{display:none}

@@ -5,7 +5,7 @@ import { articles, image, portfolio, properties, questions } from './content';
 import './styles.css';
 
 const links = [
-  ['Home', '/'], ['About', '/about'], ['Featured Properties', '/properties'],
+  ['Home', '/'], ['Buy', '/buy'], ['About', '/about'], ['Featured Properties', '/properties'],
   ['Past Transactions', '/past-transactions'], ['Journal', '/journal'], ['Let’s Connect', '/contact'],
 ];
 
@@ -57,7 +57,7 @@ function Header() {
     <header className="header">
       <Brand />
       <nav aria-label="Primary" className="top-links">
-        {[links[2], links[1], links[5]].map(([name, href]) => <Link key={href} to={href}>{name}</Link>)}
+        {links.filter(([, href]) => ['/buy', '/about', '/properties', '/contact'].includes(href)).map(([name, href]) => <Link key={href} to={href} aria-current={location.pathname === href ? 'page' : undefined}>{name}</Link>)}
       </nav>
       <button ref={trigger} type="button" className="menu-toggle" aria-label="Open menu" aria-expanded={open} aria-controls="site-menu" onClick={() => setOpen(true)}>
         <span /><span /><span />
@@ -97,7 +97,7 @@ function Hero({ title, eyebrow, photo = 'hero', subtitle, home = false }) {
       <p className="eyebrow hero-rise" style={{ '--delay': '120ms' }}>{eyebrow}</p>
       <h1 aria-label={title}>{title.split(' ').map((word, index) => <span className="hero-word" key={index}><span className="hero-rise" style={{ '--delay': (190 + index * 65) + 'ms' }}>{word}</span></span>)}</h1>
       {subtitle && <p className="hero-subtitle hero-rise" style={{ '--delay': '340ms' }}>{subtitle}</p>}
-      {home && <div className="hero-actions hero-rise" style={{ '--delay': '450ms' }}><Button to="/properties" variant="white">View Properties</Button><Button to="/contact" variant="outline">Let’s Connect</Button></div>}
+      {home && <div className="hero-actions hero-rise" style={{ '--delay': '450ms' }}><Button to="/buy" variant="white">Buy a Home</Button><Button to="/contact" variant="outline">Let’s Connect</Button></div>}
     </div>
     {home && <a href="#services" className="hero-down" aria-label="Explore our services"><Icon name="double" size={29} /></a>}
   </section>;
@@ -227,7 +227,7 @@ function Footer() {
     <div className="container">
       <Reveal className="footer-top"><div><p className="eyebrow">California Real Estate</p><h2>Let’s talk about your next move.</h2></div><Button to="/contact" variant="outline">Get in Touch</Button></Reveal>
       <Reveal className="footer-grid"><div><Brand /><p>California Coast &amp; Wine Country</p></div>
-        <div><h3>Explore</h3>{links.slice(1, 4).map(([name, href]) => <Link key={href} to={href}>{name}</Link>)}</div>
+        <div><h3>Explore</h3>{links.slice(1, 5).map(([name, href]) => <Link key={href} to={href}>{name}</Link>)}</div>
         <div><h3>Resources</h3><Link to="/journal">Journal</Link><Link to="/contact">Contact</Link><Link to="/privacy">Privacy</Link></div>
       </Reveal>
       <div className="footer-bottom"><p>© {new Date().getFullYear()} Vela Real Estate.</p><a href="#top">Back to top ↑</a></div>
@@ -252,6 +252,50 @@ function Home() {
 function Listings({ sold = false }) {
   return <><Hero title={sold ? 'Past Transactions' : 'Featured Properties'} eyebrow={sold ? 'A look back' : 'A place to call your own'} photo={sold ? 'sonoma' : 'carmel'} />
     <section className="section container"><Reveal><Title eyebrow={sold ? 'Property portfolio' : 'Selected for you'}>{sold ? 'Recently Sold' : 'Homes for Sale'}</Title></Reveal><PropertyGrid items={sold ? portfolio : properties} /></section><Closing /></>;
+}
+
+const buyerSteps = [
+  ['Define your search', 'Decide which neighborhoods, features, and price range fit the way you want to live.'],
+  ['Visit your shortlist', 'Open a listing to see the details, then request a private tour of any home you’d like to visit.'],
+  ['Plan your next move', 'Talk through your timing, questions, and what you’d want to know before making an offer.'],
+];
+
+function Buy() {
+  const [query, setQuery] = useState('');
+  const [budget, setBudget] = useState('');
+  const search = query.trim().toLowerCase();
+  const matches = properties.filter(item =>
+    (item.name + ' ' + item.location).toLowerCase().includes(search) &&
+    (!budget || item.price <= Number(budget))
+  );
+
+  return <>
+    <Hero title="Buy a Home" eyebrow="California coast & wine country" photo="carmel" />
+    <section className="section container">
+      <Reveal><Title eyebrow="Explore available properties">Find Your Next Home</Title></Reveal>
+      <Reveal className="buyer-filters">
+        <label>Search by name or location<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Try Carmel or Sonoma" /></label>
+        <label>Maximum price<select value={budget} onChange={event => setBudget(event.target.value)}>
+          <option value="">Any price</option>
+          {[5000000, 5500000, 6000000, 7000000].map(price => <option value={price} key={price}>{money.format(price)}</option>)}
+        </select></label>
+        <button className="button olive" type="button" onClick={() => { setQuery(''); setBudget(''); }}>Clear Filters</button>
+      </Reveal>
+      <p className="buyer-results" role="status">{matches.length === 1 ? '1 home found' : matches.length + ' homes found'}</p>
+      {matches.length > 0 ? <PropertyGrid items={matches} /> : <p className="buyer-empty">No homes match those filters. Try a different location or price range.</p>}
+    </section>
+    <section className="section muted">
+      <div className="container">
+        <Reveal><Title eyebrow="The buying process">From Search to Showing</Title></Reveal>
+        <ol className="buyer-steps">
+          {buyerSteps.map(([title, description], index) => <li key={title}>
+            <Reveal delay={index * 85}><p className="eyebrow">Step 0{index + 1}</p><h3>{title}</h3><p>{description}</p></Reveal>
+          </li>)}
+        </ol>
+        <Reveal className="center"><Button to="/contact?interest=buying">Start a Buyer Inquiry</Button></Reveal>
+      </div>
+    </section>
+  </>;
 }
 
 function Gallery({ item }) {
@@ -305,6 +349,7 @@ function Article({ slug }) {
 function Contact() {
   const [params] = useSearchParams();
   const property = properties.find(item => item.slug === params.get('property'));
+  const buying = params.get('interest') === 'buying';
   const [draft, setDraft] = useState('');
   const [copied, setCopied] = useState(false);
   const draftRef = useRef(null);
@@ -331,12 +376,12 @@ function Contact() {
   }
 
   return <><Hero title="Get in Touch" eyebrow="Let’s connect" photo="montecito" /><section className="section container contact">
-    <Reveal><Title eyebrow={property ? 'Private showing' : 'Start the conversation'}>{property ? 'Request a Tour' : 'Tell Me What You Have in Mind'}</Title>
+    <Reveal><Title eyebrow={property ? 'Private showing' : 'Start the conversation'}>{property ? 'Request a Tour' : buying ? 'Tell Me About Your Home Search' : 'Tell Me What You Have in Mind'}</Title>
       {property && <p className="inquiry-property">{property.name} · {property.location}</p>}
       <form onSubmit={prepare}>
         <label>Name<input name="name" autoComplete="name" required /></label>
         <label>Email<input name="email" type="email" autoComplete="email" required /></label>
-        <label>I’m interested in<select name="interest" defaultValue={property ? 'Private showing' : ''} required><option value="" disabled>Select an option</option><option>Buying</option><option>Selling</option><option>Private showing</option><option>Relocating</option></select></label>
+        <label>I’m interested in<select name="interest" defaultValue={property ? 'Private showing' : buying ? 'Buying' : ''} required><option value="" disabled>Select an option</option><option>Buying</option><option>Selling</option><option>Private showing</option><option>Relocating</option></select></label>
         <label>{property ? 'Preferred times or questions' : 'Your message'}<textarea name="message" rows="4" required /></label>
         <button className="button olive" type="submit">Prepare Inquiry</button>
       </form>
@@ -354,7 +399,7 @@ function NotFound() {
   return <><Hero title="Page Not Found" eyebrow="404" /><section className="section container center"><Button to="/">Back to Home</Button></section></>;
 }
 
-const titles = { '/about': 'About', '/properties': 'Featured Properties', '/past-transactions': 'Past Transactions', '/journal': 'Journal', '/contact': 'Contact', '/privacy': 'Privacy' };
+const titles = { '/buy': 'Buy a Home', '/about': 'About', '/properties': 'Featured Properties', '/past-transactions': 'Past Transactions', '/journal': 'Journal', '/contact': 'Contact', '/privacy': 'Privacy' };
 
 function App() {
   const location = useLocation();
@@ -368,8 +413,9 @@ function App() {
   else if (parts[0] === 'properties') page = slug ? <ListingDetail slug={slug} /> : <Listings />;
   else if (parts[0] === 'past-transactions') page = slug ? <ListingDetail slug={slug} sold /> : <Listings sold />;
   else if (parts[0] === 'journal') page = slug ? <Article slug={slug} /> : <Journal />;
+  else if (pathname === '/buy') page = <Buy />;
   else if (pathname === '/about') page = <><Hero title="About Vela" eyebrow="Get to know us" photo="hero" /><Bio full /><MarketBand /><Closing /></>;
-  else if (pathname === '/contact') page = <Contact />;
+  else if (pathname === '/contact') page = <Contact key={location.search} />;
   else if (pathname === '/privacy') page = <Privacy />;
   else page = <NotFound />;
 
